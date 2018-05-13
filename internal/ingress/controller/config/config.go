@@ -346,6 +346,11 @@ type Configuration struct {
 	// https://www.nginx.com/resources/admin-guide/proxy-protocol/
 	UseProxyProtocol bool `json:"use-proxy-protocol,omitempty"`
 
+	// When use-proxy-protocol is enabled, sets the maximum time the connection handler will wait
+	// to receieve proxy headers.
+	// Example '60s'
+	ProxyProtocolHeaderTimeout string `json:"proxy-protocol-header-timeout,omitempty"`
+
 	// Enables or disables the use of the nginx module that compresses responses using the "gzip" method
 	// http://nginx.org/en/docs/http/ngx_http_gzip_module.html
 	UseGzip bool `json:"use-gzip,omitempty"`
@@ -566,6 +571,7 @@ func NewDefault() Configuration {
 		NginxStatusIpv4Whitelist:   defNginxStatusIpv4Whitelist,
 		NginxStatusIpv6Whitelist:   defNginxStatusIpv6Whitelist,
 		ProxyRealIPCIDR:            defIPCIDR,
+		ProxyProtocolHeaderTimeout: "5s",
 		ServerNameHashMaxSize:      1024,
 		ProxyHeadersHashMaxSize:    512,
 		ProxyHeadersHashBucketSize: 64,

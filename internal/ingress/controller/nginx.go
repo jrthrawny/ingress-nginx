@@ -704,6 +704,7 @@ func nextPowerOf2(v int) int {
 }
 
 func (n *NGINXController) setupSSLProxy() {
+	cfg := n.store.GetBackendConfiguration()
 	sslPort := n.cfg.ListenPorts.HTTPS
 	proxyPort := n.cfg.ListenPorts.SSLProxy
 
@@ -722,7 +723,10 @@ func (n *NGINXController) setupSSLProxy() {
 		glog.Fatalf("%v", err)
 	}
 
-	proxyList := &proxyproto.Listener{Listener: listener}
+	//Set a deadline to prevent the connection from hanging/blocking if a non proxy-proto connection is received.
+	proxyDeadlineDuration, _ := time.ParseDuration(cfg.ProxyProtocolHeaderTimeout)
+
+	proxyList := &proxyproto.Listener{Listener: listener, ProxyHeaderTimeout: proxyDeadlineDuration}
 
 	// start goroutine that accepts tcp connections in port 443
 	go func() {
