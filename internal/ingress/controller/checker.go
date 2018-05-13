@@ -17,6 +17,7 @@ limitations under the License.
 package controller
 
 import (
+	"crypto/tls"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -51,6 +52,23 @@ func (n *NGINXController) Check(_ *http.Request) error {
 		if res.StatusCode != 200 {
 			return fmt.Errorf("dynamic load balancer not started")
 		}
+	}
+
+	if n.cfg.EnableSSLPassthrough {
+
+		tr := &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		}
+		insecureClient := &http.Client{Transport: tr}
+		res, err := insecureClient.Get(fmt.Sprintf("https://0.0.0.0:%v", n.cfg.ListenPorts.HTTPS))
+		if res.StatusCode != 404 {
+			return fmt.Errorf("TLS Passthrough listener unreachable")
+		}
+		if err != nil {
+			return errors.Wrap(err, "Unable to connect to TLS Passthrough")
+		}
+		defer res.Body.Close()
+
 	}
 
 	// check the nginx master process is running
