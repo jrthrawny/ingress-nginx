@@ -23,12 +23,48 @@ import (
 	"net/http/httptest"
 	"os/exec"
 	"testing"
+	"time"
 
 	"k8s.io/apiserver/pkg/server/healthz"
 	"k8s.io/kubernetes/pkg/util/filesystem"
 
 	ngx_config "k8s.io/ingress-nginx/internal/ingress/controller/config"
 )
+
+func TestPassthrough(t *testing.T) {
+	mux := http.NewServeMux()
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		time.Sleep(360 * time.Second)
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprintf(w, "ok")
+	}))
+	defer server.Close()
+	// port to be used in the check
+	p := server.Listener.Addr().(*net.TCPAddr).Port
+
+	// mock filesystem
+	fs := filesystem.NewFakeFs()
+
+	n := &NGINXController{
+		cfg: &Configuration{
+			ListenPorts: &ngx_config.ListenPorts{
+				Default: p,
+			},
+			EnableSSLPassthrough: true,
+		},
+		fileSystem: fs,
+	}
+	healthz.InstallHandler(mux, n)
+
+	t.Run("TLS passthrough timeout", func(t *testing.T) {
+		if err := callHealthz(true, mux); err == nil {
+			t.Error("expected an error but none returned")
+		}
+	})
+
+}
 
 func TestNginxCheck(t *testing.T) {
 	mux := http.NewServeMux()
